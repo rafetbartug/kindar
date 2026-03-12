@@ -1,13 +1,28 @@
 import os
 from storage.state_manager import ensure_state_file, load_state
 from ui.menu import list_category, show_main_menu
-from core.reader import open_reader
+from core.reader_controller import open_reader
+from display.terminal_display import TerminalDisplay
+from display.eink_display import EinkDisplay
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LIBRARY_DIR = os.path.join(BASE_DIR, "library")
 
 
-def continue_reading():
+def build_display():
+    backend = os.environ.get("KINDAR_DISPLAY", "terminal").strip().lower()
+
+    if backend == "terminal":
+        return TerminalDisplay(800, 600)
+
+    if backend == "eink":
+        return EinkDisplay(800, 600)
+
+    print(f"Unknown display backend '{backend}', falling back to terminal.")
+    return TerminalDisplay(800, 600)
+
+
+def continue_reading(display):
     state = load_state()
     last_opened = state.get("last_opened")
 
@@ -15,9 +30,28 @@ def continue_reading():
         print("No previous reading state found.")
         return
 
-    category = last_opened["category"]
-    filename = last_opened["filename"]
-    open_reader(category, filename)
+    category = last_opened.get("category")
+    filename = last_opened.get("filename")
+
+    if category not in {"manga", "books"}:
+        print("Invalid category in saved state.")
+        return
+
+    if not filename:
+        print("Invalid filename in saved state.")
+        return
+
+    file_path = os.path.join(LIBRARY_DIR, category, filename)
+
+    if not os.path.exists(file_path) or not os.path.isfile(file_path):
+        print("Saved file no longer exists.")
+        return
+
+    try:
+        open_reader(category, filename, display=display)
+    except Exception:
+        print("Failed to resume reading.")
+        return
 
 
 def select_file(files):
@@ -48,6 +82,7 @@ def select_file(files):
 
 def main():
     ensure_state_file()
+    display = build_display()
 
     while True:
         state = load_state()
@@ -55,17 +90,17 @@ def main():
         choice = input("Choice: ").strip()
 
         if choice == "1":
-            continue_reading()
+            continue_reading(display)
         elif choice == "2":
             files = list_category("manga")
             selected = select_file(files)
             if selected:
-                open_reader("manga", selected)
+                open_reader("manga", selected, display=display)
         elif choice == "3":
             files = list_category("books")
             selected = select_file(files)
             if selected:
-                open_reader("books", selected)
+                open_reader("books", selected, display=display)
         elif choice == "0":
             print("Goodbye.")
             break

@@ -1,0 +1,43 @@
+.venv/
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+
+# Editors / IDE
+.vscode/
+.idea/
+
+# Python caches / test artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Runtime outputs
+cache/
+logs/
+state/reading_state.json
+state/*.tmp
+
+# Local env
+.env
+.env.*
+
+# Temp files
+*.log
+*.tmp
+*.swp
+
+# Local library content
+library/manga/*
+library/books/*
+!library/manga/.gitkeep
+!library/books/.gitkeep
