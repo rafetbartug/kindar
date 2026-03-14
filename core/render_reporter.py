@@ -20,6 +20,8 @@ def report_render_result(display, result, memory_before, memory_after):
         print(f"Source size: {extra['source_width']}x{extra['source_height']}")
     if "note" in extra:
         print(f"Note       : {extra['note']}")
+    if "cache_hit" in extra:
+        print(f"Cache hit  : {'yes' if extra['cache_hit'] else 'no'}")
 
     try:
         display.show_image(result["output_path"])

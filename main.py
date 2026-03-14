@@ -1,25 +1,29 @@
 import os
+from core.logging_config import get_logger, setup_logging
 from storage.state_manager import ensure_state_file, load_state
 from ui.menu import list_category, show_main_menu
 from core.reader_controller import open_reader
 from display.terminal_display import TerminalDisplay
 from display.eink_display import EinkDisplay
+from core.config import DISPLAY_BACKEND, TARGET_HEIGHT, TARGET_WIDTH
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LIBRARY_DIR = os.path.join(BASE_DIR, "library")
+logger = get_logger(__name__)
 
 
 def build_display():
-    backend = os.environ.get("KINDAR_DISPLAY", "terminal").strip().lower()
+    backend = DISPLAY_BACKEND
 
     if backend == "terminal":
-        return TerminalDisplay(800, 600)
+        logger.info("Using terminal display backend.")
+        return TerminalDisplay(TARGET_WIDTH, TARGET_HEIGHT)
 
     if backend == "eink":
-        return EinkDisplay(800, 600)
+        logger.info("Using e-ink display backend.")
+        return EinkDisplay(TARGET_WIDTH, TARGET_HEIGHT)
 
+    logger.warning("Unknown display backend '%s', falling back to terminal.", backend)
     print(f"Unknown display backend '{backend}', falling back to terminal.")
-    return TerminalDisplay(800, 600)
+    return TerminalDisplay(TARGET_WIDTH, TARGET_HEIGHT)
 
 
 def continue_reading(display):
@@ -27,6 +31,7 @@ def continue_reading(display):
     last_opened = state.get("last_opened")
 
     if not last_opened:
+        logger.info("No previous reading state found for continue reading.")
         print("No previous reading state found.")
         return
 
@@ -34,22 +39,33 @@ def continue_reading(display):
     filename = last_opened.get("filename")
 
     if category not in {"manga", "books"}:
+        logger.warning("Invalid category in saved state during continue reading: %r", category)
         print("Invalid category in saved state.")
         return
 
     if not filename:
+        logger.warning("Invalid filename in saved state during continue reading: %r", filename)
         print("Invalid filename in saved state.")
         return
 
-    file_path = os.path.join(LIBRARY_DIR, category, filename)
+    from core.config import LIBRARY_DIR
+    file_path = LIBRARY_DIR / category / filename
 
-    if not os.path.exists(file_path) or not os.path.isfile(file_path):
+    if not file_path.exists() or not file_path.is_file():
+        logger.warning(
+            "Saved file missing during continue reading: %s/%s (%s)",
+            category,
+            filename,
+            file_path,
+        )
         print("Saved file no longer exists.")
         return
 
     try:
+        logger.info("Resuming reading for %s/%s.", category, filename)
         open_reader(category, filename, display=display)
     except Exception:
+        logger.exception("Failed to resume reading for %s/%s.", category, filename)
         print("Failed to resume reading.")
         return
 
@@ -81,8 +97,11 @@ def select_file(files):
 
 
 def main():
+    setup_logging()
+    logger.info("Kindar starting up.")
     ensure_state_file()
     display = build_display()
+    logger.info("Display initialized: %s", type(display).__name__)
 
     while True:
         state = load_state()
@@ -95,13 +114,16 @@ def main():
             files = list_category("manga")
             selected = select_file(files)
             if selected:
+                logger.info("Opening manga: %s", selected)
                 open_reader("manga", selected, display=display)
         elif choice == "3":
             files = list_category("books")
             selected = select_file(files)
             if selected:
+                logger.info("Opening book: %s", selected)
                 open_reader("books", selected, display=display)
         elif choice == "0":
+            logger.info("Kindar shutting down from main menu.")
             print("Goodbye.")
             break
         else:

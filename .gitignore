@@ -41,3 +41,6 @@ library/manga/*
 library/books/*
 !library/manga/.gitkeep
 !library/books/.gitkeep
+
+# Local project notes
+docs/*.md
