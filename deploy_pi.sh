@@ -23,6 +23,9 @@ scp core/session.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/"
 scp core/reader_controller.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/"
 scp core/render_reporter.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/"
 scp core/path_policy.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/"
+scp core/cache_manager.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/"
+scp core/logging_config.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/"
+scp core/config.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/"
 
 scp core/documents/base.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/documents/"
 scp core/documents/pdf_document.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/documents/"
@@ -47,6 +50,9 @@ core/reader_controller.py \
 core/render_reporter.py \
 core/documents/base.py \
 core/path_policy.py \
+core/cache_manager.py \
+core/logging_config.py \
+core/config.py \
 core/documents/pdf_document.py \
 core/documents/cbz_document.py \
 core/documents/factory.py \

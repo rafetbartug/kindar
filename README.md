@@ -1,69 +1,126 @@
 # KINDAR
 
-      _  ___ _   _ ____    _    ____
-     | |/ (_) \ | |  _ \  / \  |  _ \
-     | ' /| |  \| | | | |/ _ \ | |_) |
-     | . \| | |\  | |_| / ___ \|  _ <
-     |_|\_\_|_| \_|____/_/   \_\_| \_\
+       .~~.   .~~.
+      '. \ ' ' / .'
+       .~ .~~~..~.                      _                          _
+      : .~.'~'.~. :   ___ ___ ___ ___| |_ ___ ___ ___ _ _    ___|_|
+     ~ (   ) (   ) ~ |  _| .'|_ -| . | . | -_|  _|  _| | |  | . | |
+    ( : '~'.~.'~' : )|_| |__,|___|  _|___|___|_| |_| |_  |  |  _|_|
+     ~ .~ (   ) ~. ~             |_|                 |___|  |_|
+      (  : '~' :  )
+       '~ .~~~. ~'
+           '~'
 
-        .-------------------------------------.
-       /   minimal embedded e-ink reader      /
-      /   pdf + cbz • raspberry pi zero 2 w  /
-     '-------------------------------------'
+Minimal **embedded PDF and manga reader** built for **Raspberry Pi Zero 2 W**.
 
-              .~.                           .~.
-             /   \_________________________/   \
-            |                                     |
-            |        raspberry pi zero 2 w        |
-            |_____________________________________|
-                 \_  _/                 \_  _/
-                   ||                     ||
-                   ||                     ||
+Kindar is a lightweight reading device prototype designed with an **embedded systems mindset**.  
+The project focuses on **simplicity, stability, and deterministic behavior** rather than feature-heavy software.
 
-Minimal embedded PDF and manga reader built for Raspberry Pi Zero 2 W.
+---
 
-## Vision
+# Project Goals
 
-Kindar is a single-purpose reading device.
-It is designed with an embedded-systems mindset:
-minimal, predictable, stable, and distraction-free.
+Kindar aims to explore how a small Linux SBC can be turned into a **single‑purpose embedded device**.
 
-The Raspberry Pi is treated as a firmware-like platform for a dedicated e-ink reader,
-not as a general-purpose computer.
+Core design goals:
 
-## Current Status
+- Minimal and distraction‑free reading environment
+- Stable long‑running operation
+- Predictable system behavior
+- Low memory footprint
+- Clean modular architecture
 
-The core reading stack is working and has been refactored into cleaner components.
+Instead of treating the Raspberry Pi as a general computer, Kindar treats it as a **firmware platform powering a dedicated device**.
+
+---
+
+# Key Engineering Highlights
+
+This project intentionally focuses on **systems engineering practices** that are valuable for embedded or low‑level software development.
+
+Highlights include:
+
+- Modular architecture with clear subsystem boundaries
+- Document abstraction layer supporting multiple formats
+- Display abstraction supporting multiple rendering targets
+- Atomic state persistence for crash safety
+- Render caching system for performance on low‑power hardware
+- Embedded‑friendly fail‑soft behavior
+- Headless Linux device workflow
+
+These design choices make Kindar closer to a **device firmware stack** than a typical Python application.
+
+---
+
+# Current Status
+
+The core reading stack is implemented and functional.
 
 ### Implemented
 
-- Headless Raspberry Pi OS setup
-- Structured modular project architecture
-- JSON-based reading state persistence
-- Safe state migration and normalization
-- Atomic state writes for better reliability
-- Real PDF page detection and rendering with PyMuPDF
+System setup
+
+- Headless Raspberry Pi OS environment
+- SSH‑based device management
+- Modular project structure
+
+Reader functionality
+
+- Real PDF rendering via **PyMuPDF**
 - Real CBZ archive support
 - Natural page ordering for CBZ image entries
+- Page boundary enforcement
+- Resume from last read page
+
+Rendering pipeline
+
 - Grayscale render pipeline
-- DPI render modes (100 / 150 / 200)
-- Fitted render mode for target e-ink resolution
-- Cache system for rendered pages
+- Multiple DPI render modes (`100 / 150 / 200`)
+- Fitted render mode for e‑ink resolution
+- Rendered page caching
 - Memory usage monitoring
-- File filtering for supported formats only
-- Category-based library filtering
+
+Persistence
+
+- JSON‑based reading state
+- Atomic state writes
+- Safe state normalization
+- Crash‑safe persistence
+
+Library system
+
+- Category‑based browsing
+- File filtering for supported formats
+- Protection against invalid files
+
+Architecture
+
+- Document abstraction layer
 - Display abstraction layer
 - Terminal display backend
-- E-ink display backend skeleton
+- E‑ink display backend skeleton
 
-## Supported Formats
+---
 
-- Books: `.pdf`
-- Manga: `.cbz`
+# Supported Formats
 
-## Architecture
+Books
 
-```text
+```
+.pdf
+```
+
+Manga
+
+```
+.cbz
+```
+
+---
+
+# Architecture
+
+```
 kindar/
 ├── main.py
 ├── core/
@@ -77,62 +134,126 @@ kindar/
 ├── display/
 │   ├── base.py                # display interface
 │   ├── terminal_display.py    # terminal backend
-│   └── eink_display.py        # e-ink backend skeleton
+│   └── eink_display.py        # e‑ink backend skeleton
 ├── library/
 │   ├── books/
 │   ├── manga/
-│   └── catalog.py             # library listing and filtering
+│   └── catalog.py             # library listing
 ├── storage/
-│   └── state_manager.py       # persistence and recovery
+│   └── state_manager.py       # persistence + recovery
 ├── ui/
-│   └── menu.py                # terminal UI only
+│   └── menu.py                # terminal UI
 ├── cache/
 ├── state/
 └── logs/
 ```
 
-## Design Direction
+The architecture separates responsibilities into several independent layers:
 
-Kindar is being developed with software design principles in mind.
-Current refactoring direction emphasizes:
+- **Document layer** – parsing and rendering logic
+- **Session layer** – reading flow orchestration
+- **Display layer** – output backends
+- **Persistence layer** – state storage and recovery
+- **UI layer** – user interaction
 
-- Single Responsibility Principle
-- Clear separation between UI, session orchestration, persistence, and rendering
-- Strategy-style document handling for PDF and CBZ
-- Adapter-style display backends for terminal and future e-ink hardware
-- Dependency injection for display selection
-- Fail-soft behavior for embedded stability
+This structure makes the system easier to maintain and adapt to other embedded devices.
 
-## Display Backends
+---
 
-Display backend selection is controlled from the application entry point.
-The backend can be selected with the `KINDAR_DISPLAY` environment variable.
+# Display Backends
+
+Display backend selection is controlled via the `KINDAR_DISPLAY` environment variable.
 
 ### Terminal backend
 
-```bash
+```
 KINDAR_DISPLAY=terminal python3 main.py
 ```
 
-### E-ink backend skeleton
+Used primarily for development and debugging.
 
-```bash
+### E‑ink backend (in progress)
+
+```
 KINDAR_DISPLAY=eink python3 main.py
 ```
 
-At the moment, the e-ink backend is only a structural placeholder and is not yet connected to real hardware.
+The e‑ink backend currently exists as a structural placeholder and will later connect to the actual hardware driver.
 
-## Hardware Target
+---
+
+# Hardware Target
+
+Primary device platform:
 
 - Raspberry Pi Zero 2 W
-- E-ink display (integration in progress)
-- Physical navigation buttons (planned)
-- Embedded boot-to-reader flow (planned)
+- E‑ink display module
+- Physical navigation buttons
 
-## Near-Term Roadmap
+Design goals for the device:
 
-- Real e-ink backend implementation
-- Physical button input integration
-- Android to Pi file transfer flow
 - Boot directly into reader mode
-- Embedded stability hardening and power management
+- Minimal power consumption
+- Stable long‑running operation
+
+---
+
+# Development Roadmap
+
+Near‑term milestones
+
+- E‑ink display driver integration
+- GPIO‑based physical navigation buttons
+- Android → Raspberry Pi file transfer workflow
+- Automatic boot directly into reader mode
+- Embedded stability hardening
+- Power management improvements
+
+Future directions
+
+- Improved caching strategies
+- Performance optimizations for low‑power CPUs
+- Better display refresh control for e‑ink panels
+- Possible extraction of a reusable document rendering engine
+
+---
+
+# Why This Project Exists
+
+Kindar is partly an experiment in building **purpose‑built computing devices** using small Linux systems.
+
+Instead of general‑purpose software, the goal is to explore how software can be structured when the target is:
+
+- a single task
+- limited hardware
+- long running stability
+
+This approach mirrors real embedded Linux products where reliability, simplicity, and resource awareness matter more than feature volume.
+
+---
+
+# Portfolio / CV Value
+
+Kindar is not just a reading app prototype; it is a small embedded systems project that demonstrates:
+
+- modular software architecture
+- Linux-based device development
+- document parsing and rendering workflows
+- persistence and recovery design
+- low-power / constrained-device thinking
+- abstraction-oriented engineering for future hardware backends
+
+This makes the project relevant for portfolios targeting:
+
+- embedded software engineering
+- systems programming
+- device software
+- Linux-based product development
+
+---
+
+# Author
+
+Rafet Bartuğ
+
+Software Engineering student exploring embedded systems, low‑power computing, and minimal device design.
