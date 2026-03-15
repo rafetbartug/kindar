@@ -10,9 +10,11 @@ echo "Deploying to Raspberry Pi at ${PI_HOST}..."
 ssh "${PI_USER}@${PI_HOST}" "mkdir -p \
 ${PI_PATH} \
 ${PI_PATH}/core \
+${PI_PATH}/core/storage \
 ${PI_PATH}/core/documents \
 ${PI_PATH}/ui \
 ${PI_PATH}/storage \
+${PI_PATH}/state \
 ${PI_PATH}/display \
 ${PI_PATH}/library"
 
@@ -21,6 +23,7 @@ scp main.py "${PI_USER}@${PI_HOST}:${PI_PATH}/"
 scp core/reader.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/"
 scp core/session.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/"
 scp core/reader_controller.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/"
+scp core/recovery.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/"
 scp core/render_reporter.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/"
 scp core/path_policy.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/"
 scp core/cache_manager.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/"
@@ -35,6 +38,7 @@ scp core/documents/factory.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/documents/"
 
 scp ui/menu.py "${PI_USER}@${PI_HOST}:${PI_PATH}/ui/"
 scp storage/state_manager.py "${PI_USER}@${PI_HOST}:${PI_PATH}/storage/"
+scp core/storage/crash_state_manager.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/storage/"
 
 scp display/base.py "${PI_USER}@${PI_HOST}:${PI_PATH}/display/"
 scp display/terminal_display.py "${PI_USER}@${PI_HOST}:${PI_PATH}/display/"
@@ -47,6 +51,7 @@ main.py \
 core/reader.py \
 core/session.py \
 core/reader_controller.py \
+core/recovery.py \
 core/render_reporter.py \
 core/documents/base.py \
 core/path_policy.py \
@@ -58,6 +63,7 @@ core/documents/cbz_document.py \
 core/documents/factory.py \
 ui/menu.py \
 storage/state_manager.py \
+core/storage/crash_state_manager.py \
 display/base.py \
 display/terminal_display.py \
 display/eink_display.py \

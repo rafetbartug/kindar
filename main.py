@@ -1,14 +1,66 @@
-import os
 from core.logging_config import get_logger, setup_logging
 from storage.state_manager import ensure_state_file, load_state
+from core.storage.crash_state_manager import (
+    ensure_crash_state_file,
+    mark_app_start,
+    mark_clean_exit,
+    record_crash,
+)
 from ui.menu import list_category, show_main_menu
 from core.reader_controller import open_reader
+from core.recovery import handle_recovery_flow
 from display.terminal_display import TerminalDisplay
 from display.eink_display import EinkDisplay
 from core.config import DISPLAY_BACKEND, TARGET_HEIGHT, TARGET_WIDTH
 
 logger = get_logger(__name__)
 
+
+def run_app():
+    ensure_state_file()
+    ensure_crash_state_file()
+    crash_state = mark_app_start()
+
+    if crash_state.recovery_required:
+        logger.error(
+            "Recovery required after %s consecutive unclean startups.",
+            crash_state.consecutive_startup_failures,
+        )
+        should_continue = handle_recovery_flow(crash_state)
+        if not should_continue:
+            mark_clean_exit()
+            print("Exiting recovery mode.")
+            return
+
+    display = build_display()
+    logger.info("Display initialized: %s", type(display).__name__)
+
+    while True:
+        state = load_state()
+        show_main_menu(state)
+        choice = input("Choice: ").strip()
+
+        if choice == "1":
+            continue_reading(display)
+        elif choice == "2":
+            files = list_category("manga")
+            selected = select_file(files)
+            if selected:
+                logger.info("Opening manga: %s", selected)
+                open_reader("manga", selected, display=display)
+        elif choice == "3":
+            files = list_category("books")
+            selected = select_file(files)
+            if selected:
+                logger.info("Opening book: %s", selected)
+                open_reader("books", selected, display=display)
+        elif choice == "0":
+            logger.info("Kindar shutting down from main menu.")
+            print("Goodbye.")
+            mark_clean_exit()
+            break
+        else:
+            print("Invalid choice.")
 
 def build_display():
     backend = DISPLAY_BACKEND
@@ -99,35 +151,18 @@ def select_file(files):
 def main():
     setup_logging()
     logger.info("Kindar starting up.")
-    ensure_state_file()
-    display = build_display()
-    logger.info("Display initialized: %s", type(display).__name__)
 
-    while True:
-        state = load_state()
-        show_main_menu(state)
-        choice = input("Choice: ").strip()
-
-        if choice == "1":
-            continue_reading(display)
-        elif choice == "2":
-            files = list_category("manga")
-            selected = select_file(files)
-            if selected:
-                logger.info("Opening manga: %s", selected)
-                open_reader("manga", selected, display=display)
-        elif choice == "3":
-            files = list_category("books")
-            selected = select_file(files)
-            if selected:
-                logger.info("Opening book: %s", selected)
-                open_reader("books", selected, display=display)
-        elif choice == "0":
-            logger.info("Kindar shutting down from main menu.")
-            print("Goodbye.")
-            break
-        else:
-            print("Invalid choice.")
+    try:
+        run_app()
+    except KeyboardInterrupt:
+        logger.info("Kindar interrupted by user.")
+        print("Interrupted.")
+        mark_clean_exit()
+    except Exception as exc:
+        logger.exception("Fatal top-level crash during Kindar runtime.")
+        record_crash(str(exc), "main_loop")
+        print("Fatal error. Kindar will need restart or recovery handling.")
+        raise
 
 
 if __name__ == "__main__":
