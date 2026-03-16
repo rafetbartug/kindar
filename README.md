@@ -232,26 +232,6 @@ This approach mirrors real embedded Linux products where reliability, simplicity
 
 ---
 
-# Portfolio / CV Value
-
-Kindar is not just a reading app prototype; it is a small embedded systems project that demonstrates:
-
-- modular software architecture
-- Linux-based device development
-- document parsing and rendering workflows
-- persistence and recovery design
-- low-power / constrained-device thinking
-- abstraction-oriented engineering for future hardware backends
-
-This makes the project relevant for portfolios targeting:
-
-- embedded software engineering
-- systems programming
-- device software
-- Linux-based product development
-
----
-
 # Author
 
 Rafet Bartuğ
