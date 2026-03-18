@@ -5,16 +5,21 @@ def list_category(category):
     return list_category_files(category)
 
 
-def show_main_menu(state):
-    print("\n=== KINDAR READER ===")
-
+def _format_last_opened(state):
     last_opened = state.get("last_opened")
-    if last_opened:
-        print(f"Last opened: {last_opened['filename']} (page {last_opened['page']})")
-    else:
-        print("Last opened: None")
+    if not last_opened:
+        return "No recent book"
 
-    print("1. Continue Reading")
-    print("2. Manga")
-    print("3. Books")
-    print("0. Exit")
+    filename = last_opened.get("filename", "Unknown")
+    page = last_opened.get("page", "?")
+    return f"Recent: {filename} (page {page})"
+
+
+def show_main_menu(state):
+    print("\n[KINDAR]")
+    print(_format_last_opened(state))
+    print()
+    print("1  Continue")
+    print("2  Manga")
+    print("3  Books")
+    print("0  Exit")

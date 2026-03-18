@@ -1,5 +1,3 @@
-
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -44,24 +42,23 @@ def clear_cache(cache_root: Path | str = CACHE_ROOT) -> None:
 
 
 def show_recovery_menu(crash_state) -> str:
-    print("\n=== KINDAR RECOVERY ===")
-    print(
-        f"Consecutive unclean startups: {crash_state.consecutive_startup_failures}"
-    )
+    print("\n[RECOVERY]")
+    print(f"Unclean starts: {crash_state.consecutive_startup_failures}")
 
     if crash_state.last_crash_phase:
-        print(f"Last crash phase : {crash_state.last_crash_phase}")
+        print(f"Phase : {crash_state.last_crash_phase}")
     if crash_state.last_crash_reason:
-        print(f"Last crash reason: {crash_state.last_crash_reason}")
+        print(f"Reason: {crash_state.last_crash_reason}")
     if crash_state.last_crash_time:
-        print(f"Last crash time  : {crash_state.last_crash_time}")
+        print(f"Time  : {crash_state.last_crash_time}")
 
-    print("1. Retry normal startup")
-    print("2. Clear continue-reading state and open normally")
-    print("3. Reset crash state")
-    print("4. Clear cache")
-    print("0. Exit")
-    return input("Recovery choice: ").strip()
+    print()
+    print("1  Retry startup")
+    print("2  Clear recent book")
+    print("3  Reset crash state")
+    print("4  Clear cache")
+    print("0  Exit")
+    return input("Choice: ").strip()
 
 
 def handle_recovery_flow(crash_state) -> bool:
@@ -95,4 +92,4 @@ def handle_recovery_flow(crash_state) -> bool:
             logger.info("Recovery action: exit selected.")
             return False
 
-        print("Invalid recovery choice.")
+        print("Invalid choice.")

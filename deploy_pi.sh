@@ -29,6 +29,7 @@ scp core/path_policy.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/"
 scp core/cache_manager.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/"
 scp core/logging_config.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/"
 scp core/config.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/"
+scp core/memory_profiler.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/"
 
 scp core/documents/base.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/documents/"
 scp core/documents/pdf_document.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/documents/"
@@ -58,6 +59,7 @@ core/path_policy.py \
 core/cache_manager.py \
 core/logging_config.py \
 core/config.py \
+core/memory_profiler.py \
 core/documents/pdf_document.py \
 core/documents/cbz_document.py \
 core/documents/factory.py \

@@ -11,6 +11,7 @@ from core.reader_controller import open_reader
 from core.recovery import handle_recovery_flow
 from display.terminal_display import TerminalDisplay
 from display.eink_display import EinkDisplay
+from display.preview_display import PreviewDisplay
 from core.config import DISPLAY_BACKEND, TARGET_HEIGHT, TARGET_WIDTH
 
 logger = get_logger(__name__)
@@ -29,7 +30,7 @@ def run_app():
         should_continue = handle_recovery_flow(crash_state)
         if not should_continue:
             mark_clean_exit()
-            print("Exiting recovery mode.")
+            print("Recovery exit.")
             return
 
     display = build_display()
@@ -56,7 +57,7 @@ def run_app():
                 open_reader("books", selected, display=display)
         elif choice == "0":
             logger.info("Kindar shutting down from main menu.")
-            print("Goodbye.")
+            print("Bye.")
             mark_clean_exit()
             break
         else:
@@ -73,6 +74,10 @@ def build_display():
         logger.info("Using e-ink display backend.")
         return EinkDisplay(TARGET_WIDTH, TARGET_HEIGHT)
 
+    if backend == "preview":
+        logger.info("Using preview display backend.")
+        return PreviewDisplay(TARGET_WIDTH, TARGET_HEIGHT)
+
     logger.warning("Unknown display backend '%s', falling back to terminal.", backend)
     print(f"Unknown display backend '{backend}', falling back to terminal.")
     return TerminalDisplay(TARGET_WIDTH, TARGET_HEIGHT)
@@ -84,7 +89,7 @@ def continue_reading(display):
 
     if not last_opened:
         logger.info("No previous reading state found for continue reading.")
-        print("No previous reading state found.")
+        print("No recent book.")
         return
 
     category = last_opened.get("category")
@@ -92,12 +97,12 @@ def continue_reading(display):
 
     if category not in {"manga", "books"}:
         logger.warning("Invalid category in saved state during continue reading: %r", category)
-        print("Invalid category in saved state.")
+        print("Saved category is invalid.")
         return
 
     if not filename:
         logger.warning("Invalid filename in saved state during continue reading: %r", filename)
-        print("Invalid filename in saved state.")
+        print("Saved filename is invalid.")
         return
 
     from core.config import LIBRARY_DIR
@@ -110,7 +115,7 @@ def continue_reading(display):
             filename,
             file_path,
         )
-        print("Saved file no longer exists.")
+        print("Recent file is missing.")
         return
 
     try:
@@ -118,22 +123,22 @@ def continue_reading(display):
         open_reader(category, filename, display=display)
     except Exception:
         logger.exception("Failed to resume reading for %s/%s.", category, filename)
-        print("Failed to resume reading.")
+        print("Resume failed.")
         return
 
 
 def select_file(files):
     if not files:
-        print("No supported files found.")
+        print("No books found.")
         return None
 
     for i, file in enumerate(files, start=1):
         print(f"{i}. {file}")
 
-    choice = input("Select file (0 to cancel): ").strip()
+    choice = input("Choice (0 to cancel): ").strip()
 
     if not choice.isdigit():
-        print("Invalid input.")
+        print("Enter a number.")
         return None
 
     choice = int(choice)
@@ -144,7 +149,7 @@ def select_file(files):
     if 1 <= choice <= len(files):
         return files[choice - 1]
 
-    print("Invalid selection.")
+    print("Invalid choice.")
     return None
 
 
@@ -156,12 +161,12 @@ def main():
         run_app()
     except KeyboardInterrupt:
         logger.info("Kindar interrupted by user.")
-        print("Interrupted.")
+        print("Stopped.")
         mark_clean_exit()
     except Exception as exc:
         logger.exception("Fatal top-level crash during Kindar runtime.")
         record_crash(str(exc), "main_loop")
-        print("Fatal error. Kindar will need restart or recovery handling.")
+        print("Fatal error. Restart or recovery is required.")
         raise
 
 

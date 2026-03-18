@@ -9,6 +9,12 @@ from core.cache_manager import (
 from core.path_policy import build_cache_dir, build_document_path
 from core.config import CACHE_ENABLED, DEFAULT_RENDER_MODE, TARGET_HEIGHT, TARGET_WIDTH
 from core.render_reporter import report_render_result
+from core.memory_profiler import (
+    append_render_metrics_csv,
+    build_render_metrics,
+    get_rss_kb,
+    now_perf_ms,
+)
 from core.logging_config import get_logger
 from storage.state_manager import get_saved_page, load_state, save_progress
 
@@ -51,51 +57,41 @@ class ReaderSession:
         )
             
 
-    def _get_memory_kb(self):
-        try:
-            with open("/proc/self/status", "r", encoding="utf-8") as f:
-                for line in f:
-                    if line.startswith("VmRSS:"):
-                        parts = line.split()
-                        return int(parts[1])
-        except Exception:
-            pass
-        return -1
-
     def show_opening_message(self):
         if self.current_page > 1:
-            print(
-                f"\nResuming '{self.filename}' from page "
-                f"{self.current_page}/{self.total_pages}"
-            )
+            print(f"\nResume: {self.filename} ({self.current_page}/{self.total_pages})")
         else:
-            print(f"\nOpening '{self.filename}' from page 1/{self.total_pages}")
+            print(f"\nOpen: {self.filename} (1/{self.total_pages})")
 
     def show_status(self):
-        print(f"\n--- READING: {self.filename} ---")
-        print(f"Document path: {self.document_path}")
-        print(f"Current page: {self.current_page}/{self.total_pages}")
-        print(f"Target screen: {self.TARGET_WIDTH}x{self.TARGET_HEIGHT}")
-        print("n     = next page")
-        print("p     = previous page")
-        print(f"r     = render current page using default mode ({DEFAULT_RENDER_MODE})")
-        print("r100  = render at 100 DPI")
-        print("r150  = render at 150 DPI")
-        print("r200  = render at 200 DPI")
-        print("rf    = render page fitted for e-ink target")
-        print("q     = save and quit")
+        print(f"\n[READING]")
+        print(self.filename)
+        print(f"Page: {self.current_page}/{self.total_pages}")
+        print(f"Screen: {self.TARGET_WIDTH}x{self.TARGET_HEIGHT}")
+        print()
+        print("n     Next")
+        print("p     Prev")
+        print(f"r     Render ({DEFAULT_RENDER_MODE})")
+        print("r100  Render 100")
+        print("r150  Render 150")
+        print("r200  Render 200")
+        print("rf    Render fit")
+        print("q     Save + exit")
+
+    def _document_type_name(self):
+        return type(self.document).__name__
 
     def next_page(self):
         if self.current_page < self.total_pages:
             self.current_page += 1
         else:
-            print("Already at the last page.")
+            print("Already at last page.")
 
     def prev_page(self):
         if self.current_page > 1:
             self.current_page -= 1
         else:
-            print("Already at page 1.")
+            print("Already at first page.")
 
     def render_current_page(self, dpi=100):
         if not self.document_path.exists():
@@ -110,7 +106,8 @@ class ReaderSession:
             self.current_page,
             dpi,
         )
-        memory_before = self._get_memory_kb()
+        memory_before = get_rss_kb()
+        start_ms = now_perf_ms()
 
         try:
             if CACHE_ENABLED and is_cache_hit(cache_path):
@@ -143,8 +140,22 @@ class ReaderSession:
                 result.setdefault("extra", {})
                 result["extra"]["cache_hit"] = False
 
-            memory_after = self._get_memory_kb()
+            memory_after = get_rss_kb()
+            elapsed_ms = now_perf_ms() - start_ms
             report_render_result(self.display, result, memory_before, memory_after)
+            metrics = build_render_metrics(
+                document_type=self._document_type_name(),
+                render_mode=f"dpi_{dpi}",
+                page=self.current_page,
+                target_width=self.TARGET_WIDTH,
+                target_height=self.TARGET_HEIGHT,
+                cache_hit=result.get("extra", {}).get("cache_hit", False),
+                memory_before_kb=memory_before,
+                memory_after_kb=memory_after,
+                elapsed_ms=elapsed_ms,
+                status="ok",
+            )
+            append_render_metrics_csv(metrics)
         except ValueError as e:
             logger.warning(
                 "Render failed for %s/%s page=%s dpi=%s: %s",
@@ -155,6 +166,22 @@ class ReaderSession:
                 e,
             )
             print(f"Render failed: {e}")
+            memory_after = get_rss_kb()
+            elapsed_ms = now_perf_ms() - start_ms
+            metrics = build_render_metrics(
+                document_type=self._document_type_name(),
+                render_mode=f"dpi_{dpi}",
+                page=self.current_page,
+                target_width=self.TARGET_WIDTH,
+                target_height=self.TARGET_HEIGHT,
+                cache_hit=False,
+                memory_before_kb=memory_before,
+                memory_after_kb=memory_after,
+                elapsed_ms=elapsed_ms,
+                status="error",
+                error=str(e),
+            )
+            append_render_metrics_csv(metrics)
         except Exception:
             logger.exception(
                 "Unexpected render failure for %s/%s page=%s dpi=%s.",
@@ -164,6 +191,22 @@ class ReaderSession:
                 dpi,
             )
             print("Render failed: unexpected error.")
+            memory_after = get_rss_kb()
+            elapsed_ms = now_perf_ms() - start_ms
+            metrics = build_render_metrics(
+                document_type=self._document_type_name(),
+                render_mode=f"dpi_{dpi}",
+                page=self.current_page,
+                target_width=self.TARGET_WIDTH,
+                target_height=self.TARGET_HEIGHT,
+                cache_hit=False,
+                memory_before_kb=memory_before,
+                memory_after_kb=memory_after,
+                elapsed_ms=elapsed_ms,
+                status="error",
+                error="unexpected error",
+            )
+            append_render_metrics_csv(metrics)
 
     def render_current_page_fitted(self):
         if not self.document_path.exists():
@@ -184,7 +227,8 @@ class ReaderSession:
             self.TARGET_WIDTH,
             self.TARGET_HEIGHT,
         )
-        memory_before = self._get_memory_kb()
+        memory_before = get_rss_kb()
+        start_ms = now_perf_ms()
 
         try:
             if CACHE_ENABLED and is_cache_hit(cache_path):
@@ -220,8 +264,22 @@ class ReaderSession:
                 result.setdefault("extra", {})
                 result["extra"]["cache_hit"] = False
 
-            memory_after = self._get_memory_kb()
+            memory_after = get_rss_kb()
+            elapsed_ms = now_perf_ms() - start_ms
             report_render_result(self.display, result, memory_before, memory_after)
+            metrics = build_render_metrics(
+                document_type=self._document_type_name(),
+                render_mode="fit",
+                page=self.current_page,
+                target_width=self.TARGET_WIDTH,
+                target_height=self.TARGET_HEIGHT,
+                cache_hit=result.get("extra", {}).get("cache_hit", False),
+                memory_before_kb=memory_before,
+                memory_after_kb=memory_after,
+                elapsed_ms=elapsed_ms,
+                status="ok",
+            )
+            append_render_metrics_csv(metrics)
         except ValueError as e:
             logger.warning(
                 "Fitted render failed for %s/%s page=%s: %s",
@@ -231,6 +289,22 @@ class ReaderSession:
                 e,
             )
             print(f"Render failed: {e}")
+            memory_after = get_rss_kb()
+            elapsed_ms = now_perf_ms() - start_ms
+            metrics = build_render_metrics(
+                document_type=self._document_type_name(),
+                render_mode="fit",
+                page=self.current_page,
+                target_width=self.TARGET_WIDTH,
+                target_height=self.TARGET_HEIGHT,
+                cache_hit=False,
+                memory_before_kb=memory_before,
+                memory_after_kb=memory_after,
+                elapsed_ms=elapsed_ms,
+                status="error",
+                error=str(e),
+            )
+            append_render_metrics_csv(metrics)
         except Exception:
             logger.exception(
                 "Unexpected fitted render failure for %s/%s page=%s.",
@@ -239,6 +313,22 @@ class ReaderSession:
                 self.current_page,
             )
             print("Render failed: unexpected error.")
+            memory_after = get_rss_kb()
+            elapsed_ms = now_perf_ms() - start_ms
+            metrics = build_render_metrics(
+                document_type=self._document_type_name(),
+                render_mode="fit",
+                page=self.current_page,
+                target_width=self.TARGET_WIDTH,
+                target_height=self.TARGET_HEIGHT,
+                cache_hit=False,
+                memory_before_kb=memory_before,
+                memory_after_kb=memory_after,
+                elapsed_ms=elapsed_ms,
+                status="error",
+                error="unexpected error",
+            )
+            append_render_metrics_csv(metrics)
 
     def render_current_page_default(self):
         if DEFAULT_RENDER_MODE == "fit":
@@ -268,7 +358,7 @@ class ReaderSession:
         elif command == "rf":
             self.render_current_page_fitted()
         else:
-            print("Invalid render command.")
+            print("Invalid command.")
 
     def save_and_quit(self):
         logger.info(
@@ -285,4 +375,4 @@ class ReaderSession:
             self.filename,
             self.current_page,
         )
-        print(f"Saved progress: page {self.current_page}/{self.total_pages}")
+        print(f"Saved: {self.current_page}/{self.total_pages}")
