@@ -72,7 +72,7 @@ def build_display():
 
     if backend == "eink":
         logger.info("Using e-ink display backend.")
-        return EinkDisplay(TARGET_WIDTH, TARGET_HEIGHT)
+        return EinkDisplay()
 
     if backend == "preview":
         logger.info("Using preview display backend.")

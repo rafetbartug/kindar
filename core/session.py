@@ -36,18 +36,34 @@ class ReaderSession:
 
         if display is None:
             raise ValueError("Display is required.")
+
         self.display = display
         self.cache_dir = build_cache_dir(self.category, self.filename)
         self.book_key = f"{category}/{filename}"
         self.state = load_state()
         self.document = create_document(self.document_path, self.cache_dir)
-        logger.info("Document created for %s/%s using %s.", category, filename, type(self.document).__name__)
-        self.total_pages = self.document.get_total_pages()
-        logger.info("Resolved total pages for %s/%s: %s", category, filename, self.total_pages)
-        self.current_page = max(1, get_saved_page(self.state, self.book_key))
 
+        logger.info(
+            "Document created for %s/%s using %s.",
+            category,
+            filename,
+            type(self.document).__name__,
+        )
+
+        self.total_pages = self.document.get_total_pages()
+        logger.info(
+            "Resolved total pages for %s/%s: %s",
+            category,
+            filename,
+            self.total_pages,
+        )
+
+        self.current_page = max(1, get_saved_page(self.state, self.book_key))
         if self.current_page > self.total_pages:
             self.current_page = self.total_pages
+
+        self.selected_render_mode = "r150" if self.category == "manga" else "r100"
+
         logger.info(
             "Reader session ready for %s/%s at page %s/%s.",
             category,
@@ -55,7 +71,48 @@ class ReaderSession:
             self.current_page,
             self.total_pages,
         )
-            
+
+    def get_selected_render_command(self):
+        valid_modes = {"rf", "r100", "r150", "r200"}
+        if self.selected_render_mode in valid_modes:
+            return self.selected_render_mode
+        return "r150" if self.category == "manga" else "r100"
+
+    def cycle_render_mode(self):
+        if self.category == "manga":
+            modes = ["r150", "r200", "rf", "r100"]
+        else:
+            modes = ["r100", "r150", "r200", "rf"]
+
+        current = self.get_selected_render_command()
+        try:
+            index = modes.index(current)
+        except ValueError:
+            index = 0
+
+        self.selected_render_mode = modes[(index + 1) % len(modes)]
+        return self.selected_render_mode
+
+    def sleep_display(self):
+        try:
+            if getattr(self, "display", None) is not None:
+                self.display.clear()
+        except Exception as exc:
+            print(f"[WARN] Failed to clear/sleep display: {exc}")
+
+    def render_selected_mode(self):
+        command = self.get_selected_render_command()
+
+        if command == "rf":
+            self.render_current_page_fitted()
+        elif command == "r100":
+            self.render_current_page(100)
+        elif command == "r150":
+            self.render_current_page(150)
+        elif command == "r200":
+            self.render_current_page(200)
+        else:
+            self.render_current_page_default()
 
     def show_opening_message(self):
         if self.current_page > 1:
@@ -64,32 +121,33 @@ class ReaderSession:
             print(f"\nOpen: {self.filename} (1/{self.total_pages})")
 
     def show_status(self):
-        print(f"\n[READING]")
+        print("\n[READING]")
         print(self.filename)
         print(f"Page: {self.current_page}/{self.total_pages}")
         print(f"Screen: {self.TARGET_WIDTH}x{self.TARGET_HEIGHT}")
         print()
-        print("n     Next")
-        print("p     Prev")
-        print(f"r     Render ({DEFAULT_RENDER_MODE})")
-        print("r100  Render 100")
-        print("r150  Render 150")
-        print("r200  Render 200")
-        print("rf    Render fit")
-        print("q     Save + exit")
+        print(
+            f"Commands: n=next(auto {self.get_selected_render_command()}), "
+            f"p=prev(auto {self.get_selected_render_command()}), "
+            f"m=change render, r/rf/r100/r150/r200=manual render, q=save and quit"
+        )
 
     def _document_type_name(self):
         return type(self.document).__name__
 
-    def next_page(self):
+    def next_page(self, auto_render=False):
         if self.current_page < self.total_pages:
             self.current_page += 1
+            if auto_render:
+                self.render_selected_mode()
         else:
             print("Already at last page.")
 
-    def prev_page(self):
+    def prev_page(self, auto_render=False):
         if self.current_page > 1:
             self.current_page -= 1
+            if auto_render:
+                self.render_selected_mode()
         else:
             print("Already at first page.")
 
@@ -143,6 +201,7 @@ class ReaderSession:
             memory_after = get_rss_kb()
             elapsed_ms = now_perf_ms() - start_ms
             report_render_result(self.display, result, memory_before, memory_after)
+
             metrics = build_render_metrics(
                 document_type=self._document_type_name(),
                 render_mode=f"dpi_{dpi}",
@@ -156,6 +215,7 @@ class ReaderSession:
                 status="ok",
             )
             append_render_metrics_csv(metrics)
+
         except ValueError as e:
             logger.warning(
                 "Render failed for %s/%s page=%s dpi=%s: %s",
@@ -182,6 +242,7 @@ class ReaderSession:
                 error=str(e),
             )
             append_render_metrics_csv(metrics)
+
         except Exception:
             logger.exception(
                 "Unexpected render failure for %s/%s page=%s dpi=%s.",
@@ -267,6 +328,7 @@ class ReaderSession:
             memory_after = get_rss_kb()
             elapsed_ms = now_perf_ms() - start_ms
             report_render_result(self.display, result, memory_before, memory_after)
+
             metrics = build_render_metrics(
                 document_type=self._document_type_name(),
                 render_mode="fit",
@@ -280,6 +342,7 @@ class ReaderSession:
                 status="ok",
             )
             append_render_metrics_csv(metrics)
+
         except ValueError as e:
             logger.warning(
                 "Fitted render failed for %s/%s page=%s: %s",
@@ -305,6 +368,7 @@ class ReaderSession:
                 error=str(e),
             )
             append_render_metrics_csv(metrics)
+
         except Exception:
             logger.exception(
                 "Unexpected fitted render failure for %s/%s page=%s.",
@@ -348,15 +412,23 @@ class ReaderSession:
 
     def handle_render_command(self, command):
         if command == "r":
-            self.render_current_page_default()
+            self.selected_render_mode = "rf"
+            self.render_current_page_fitted()
         elif command == "r100":
+            self.selected_render_mode = "r100"
             self.render_current_page(100)
         elif command == "r150":
+            self.selected_render_mode = "r150"
             self.render_current_page(150)
         elif command == "r200":
+            self.selected_render_mode = "r200"
             self.render_current_page(200)
         elif command == "rf":
+            self.selected_render_mode = "rf"
             self.render_current_page_fitted()
+        elif command == "m":
+            new_mode = self.cycle_render_mode()
+            print(f"Selected render mode: {new_mode}")
         else:
             print("Invalid command.")
 
@@ -375,4 +447,5 @@ class ReaderSession:
             self.filename,
             self.current_page,
         )
+        self.sleep_display()
         print(f"Saved: {self.current_page}/{self.total_pages}")

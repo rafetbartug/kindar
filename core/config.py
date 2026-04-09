@@ -31,7 +31,7 @@ CACHE_DIR = BASE_DIR / "cache"
 LOG_DIR = BASE_DIR / "logs"
 STATE_DIR = BASE_DIR / "state"
 
-DISPLAY_BACKEND = os.environ.get("KINDAR_DISPLAY", "terminal").strip().lower()
+DISPLAY_BACKEND = os.environ.get("KINDAR_DISPLAY", "eink").strip().lower()
 LOG_LEVEL = os.environ.get("KINDAR_LOG_LEVEL", "INFO").strip().upper()
 
 TARGET_WIDTH = _get_int_env("KINDAR_TARGET_WIDTH", 800)

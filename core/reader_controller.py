@@ -27,13 +27,19 @@ def open_reader(category, filename, display=None):
         session.show_status()
         command = input("Command: ").strip().lower()
         logger.debug("Reader command received for %s/%s: %s", category, filename, command)
-
+        
         if command == "n":
-            session.next_page()
+            session.next_page(auto_render=True)
+
         elif command == "p":
-            session.prev_page()
-        elif command in {"r", "r100", "r150", "r200", "rf"}:
+            session.prev_page(auto_render=True)
+
+        elif command == "m":
+            session.handle_render_command("m")
+
+        elif command in {"r", "rf", "r100", "r150", "r200"}:
             session.handle_render_command(command)
+
         elif command == "q":
             logger.info("Saving and closing reader for %s/%s.", category, filename)
             session.save_and_quit()

@@ -43,6 +43,7 @@ scp core/storage/crash_state_manager.py "${PI_USER}@${PI_HOST}:${PI_PATH}/core/s
 
 scp display/base.py "${PI_USER}@${PI_HOST}:${PI_PATH}/display/"
 scp display/terminal_display.py "${PI_USER}@${PI_HOST}:${PI_PATH}/display/"
+scp display/preview_display.py "${PI_USER}@${PI_HOST}:${PI_PATH}/display/"
 scp display/eink_display.py "${PI_USER}@${PI_HOST}:${PI_PATH}/display/"
 scp library/catalog.py "${PI_USER}@${PI_HOST}:${PI_PATH}/library/"
 
@@ -68,6 +69,7 @@ storage/state_manager.py \
 core/storage/crash_state_manager.py \
 display/base.py \
 display/terminal_display.py \
+display/preview_display.py \
 display/eink_display.py \
 library/catalog.py"
 
