@@ -1,8 +1,5 @@
-
-
 from core.session import ReaderSession
 from core.logging_config import get_logger
-
 
 logger = get_logger(__name__)
 
@@ -23,11 +20,14 @@ def open_reader(category, filename, display=None):
     session.show_opening_message()
     logger.info("Reader session started for %s/%s.", category, filename)
 
+    # Acilista ilk sayfayi secili varsayilan render ile bas
+    session.render_selected_mode()
+
     while True:
         session.show_status()
         command = input("Command: ").strip().lower()
         logger.debug("Reader command received for %s/%s: %s", category, filename, command)
-        
+
         if command == "n":
             session.next_page(auto_render=True)
 
@@ -44,6 +44,7 @@ def open_reader(category, filename, display=None):
             logger.info("Saving and closing reader for %s/%s.", category, filename)
             session.save_and_quit()
             break
+
         else:
             logger.warning("Invalid reader command for %s/%s: %s", category, filename, command)
             print("Invalid command.")

@@ -54,7 +54,7 @@ These design choices make Kindar closer to a **device firmware stack** than a ty
 
 # Current Status
 
-The core reading stack is implemented and functional.
+The core reading stack is implemented and functional, including direct e‑ink output on the target hardware.
 
 ### Implemented
 
@@ -79,6 +79,8 @@ Rendering pipeline
 - Fitted render mode for e‑ink resolution
 - Rendered page caching
 - Memory usage monitoring
+- Automatic page render on navigation
+- Per-session render mode selection (`r100 / r150 / r200 / rf`)
 
 Persistence
 
@@ -98,7 +100,8 @@ Architecture
 - Document abstraction layer
 - Display abstraction layer
 - Terminal display backend
-- E‑ink display backend skeleton
+- Waveshare 7.5" e‑ink display backend
+- Session-level render mode control
 
 ---
 
@@ -134,7 +137,7 @@ kindar/
 ├── display/
 │   ├── base.py                # display interface
 │   ├── terminal_display.py    # terminal backend
-│   └── eink_display.py        # e‑ink backend skeleton
+│   └── eink_display.py        # Waveshare e‑ink backend
 ├── library/
 │   ├── books/
 │   ├── manga/
@@ -160,6 +163,25 @@ This structure makes the system easier to maintain and adapt to other embedded d
 
 ---
 
+# Reader Controls
+
+Current reader controls:
+
+- `n` – next page and auto-render using the currently selected render mode
+- `p` – previous page and auto-render using the currently selected render mode
+- `m` – cycle render mode for the current session
+- `r` / `rf` / `r100` / `r150` / `r200` – manual render commands
+- `q` – save progress, clear the display to white, and sleep the panel
+
+Default render behavior:
+
+- Books default to `r100`
+- Manga defaults to `r150`
+
+The selected render mode persists for the current reading session and is reused by page navigation.
+
+---
+
 # Display Backends
 
 Display backend selection is controlled via the `KINDAR_DISPLAY` environment variable.
@@ -172,13 +194,20 @@ KINDAR_DISPLAY=terminal python3 main.py
 
 Used primarily for development and debugging.
 
-### E‑ink backend (in progress)
+### E‑ink backend
 
 ```
 KINDAR_DISPLAY=eink python3 main.py
 ```
 
-The e‑ink backend currently exists as a structural placeholder and will later connect to the actual hardware driver.
+The e‑ink backend is now connected to the Waveshare 7.5" display driver and can render real pages directly to the panel.
+
+Current behavior:
+
+- Rendered pages are pushed directly to the e‑ink display
+- Navigation commands can auto-render the next/previous page
+- Reader sessions can cycle render quality modes during reading
+- Exiting the reader clears the panel to white and puts the display into sleep mode
 
 ---
 
@@ -187,8 +216,8 @@ The e‑ink backend currently exists as a structural placeholder and will later 
 Primary device platform:
 
 - Raspberry Pi Zero 2 W
-- E‑ink display module
-- Physical navigation buttons
+- Waveshare 7.5" e‑ink display
+- Physical navigation buttons (planned)
 
 Design goals for the device:
 
@@ -202,7 +231,7 @@ Design goals for the device:
 
 Near‑term milestones
 
-- E‑ink display driver integration
+- E‑ink display quality and refresh tuning
 - GPIO‑based physical navigation buttons
 - Android → Raspberry Pi file transfer workflow
 - Automatic boot directly into reader mode
@@ -218,19 +247,6 @@ Future directions
 
 ---
 
-# Why This Project Exists
-
-Kindar is partly an experiment in building **purpose‑built computing devices** using small Linux systems.
-
-Instead of general‑purpose software, the goal is to explore how software can be structured when the target is:
-
-- a single task
-- limited hardware
-- long running stability
-
-This approach mirrors real embedded Linux products where reliability, simplicity, and resource awareness matter more than feature volume.
-
----
 
 # Author
 
